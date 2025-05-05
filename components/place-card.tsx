@@ -1,122 +1,95 @@
-"use client";
+"use client"
 
-import { motion } from "framer-motion";
-import {
-  MapPin,
-  Navigation,
-  Clock,
-  Phone,
-  ExternalLink,
-  Info,
-  Tag,
-  Star,
-} from "lucide-react";
-import { useState } from "react";
+import { motion } from "framer-motion"
+import { MapPin, Navigation, Clock, Phone, ExternalLink, Info, Tag, Star } from "lucide-react"
+import { useState } from "react"
 
 type Place = {
-  place_id: string;
-  name: string;
-  types: string[];
-  vicinity: string;
-  formatted_address?: string;
+  place_id: string
+  name: string
+  types: string[]
+  vicinity: string
+  formatted_address?: string
   geometry: {
     location: {
-      lat: number;
-      lng: number;
-    };
-  };
+      lat: number
+      lng: number
+    }
+  }
   photos?: Array<{
-    photo_reference: string;
-    width: number;
-    height: number;
-  }>;
+    photo_reference: string
+    width: number
+    height: number
+  }>
   opening_hours?: {
-    open_now?: boolean;
-    weekday_text?: string[];
-  };
-  formatted_phone_number?: string;
-  website?: string;
-  rating?: number;
-  price_level?: number;
-  distance?: number;
-  user_ratings_total?: number;
-};
+    open_now?: boolean
+    weekday_text?: string[]
+  }
+  formatted_phone_number?: string
+  website?: string
+  rating?: number
+  price_level?: number
+  distance?: number
+  user_ratings_total?: number
+}
 
 type PlaceCardProps = {
-  place: Place;
-  index: number;
+  place: Place
+  index: number
   userLocation: {
-    lat: number;
-    lng: number;
-  };
-};
+    lat: number
+    lng: number
+  }
+}
 
-export default function PlaceCard({
-  place,
-  index,
-  userLocation,
-}: PlaceCardProps) {
-  const [isDirectionsLoading, setIsDirectionsLoading] = useState(false);
-  const [directionsError, setDirectionsError] = useState<string | null>(null);
-  const [showAllHours, setShowAllHours] = useState(false);
+export default function PlaceCard({ place, index, userLocation }: PlaceCardProps) {
+  const [isDirectionsLoading, setIsDirectionsLoading] = useState(false)
+  const [directionsError, setDirectionsError] = useState<string | null>(null)
+  const [showAllHours, setShowAllHours] = useState(false)
 
-  console.log("PlaceCard props:", { place, index, userLocation });
+  console.log("PlaceCard props:", { place, index, userLocation })
 
   const openInGoogleMaps = () => {
     try {
-      setIsDirectionsLoading(true);
-      setDirectionsError(null);
+      setIsDirectionsLoading(true)
+      setDirectionsError(null)
 
-      const { lat, lng } = place.geometry.location;
-      const url = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${lat},${lng}&destination_place_id=${place.place_id}&travelmode=driving`;
-      window.open(url, "_blank", "noopener,noreferrer");
+      const { lat, lng } = place.geometry.location
+      const url = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${lat},${lng}&destination_place_id=${place.place_id}&travelmode=driving`
+      window.open(url, "_blank", "noopener,noreferrer")
     } catch (error) {
-      console.error("Error opening directions:", error);
-      setDirectionsError("Could not open directions");
+      console.error("Error opening directions:", error)
+      setDirectionsError("Could not open directions")
     } finally {
-      setIsDirectionsLoading(false);
+      setIsDirectionsLoading(false)
     }
-  };
+  }
 
   const formatDistance = (meters?: number) => {
     if (!meters || isNaN(meters)) {
-      const { lat: lat2, lng: lon2 } = place.geometry.location;
+      const { lat: lat2, lng: lon2 } = place.geometry.location
       if (!isNaN(userLocation.lat) && !isNaN(userLocation.lng)) {
-        meters = calculateDistance(
-          userLocation.lat,
-          userLocation.lng,
-          lat2,
-          lon2
-        );
+        meters = calculateDistance(userLocation.lat, userLocation.lng, lat2, lon2)
       } else {
-        return "Unknown";
+        return "Unknown"
       }
     }
-    return meters < 1000
-      ? `${Math.round(meters)} m`
-      : `${(meters / 1000).toFixed(1)} km`;
-  };
+    return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`
+  }
 
-  const calculateDistance = (
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ) => {
-    const R = 6371e3;
-    const φ1 = (lat1 * Math.PI) / 180;
-    const φ2 = (lat2 * Math.PI) / 180;
-    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3
+    const φ1 = (lat1 * Math.PI) / 180
+    const φ2 = (lat2 * Math.PI) / 180
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180
 
-    const a =
-      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  };
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  }
 
   const getCategoryName = () => {
-    if (!place.types?.length) return "Place";
+    if (!place.types?.length) return "Place"
 
     const typeMapping: Record<string, string> = {
       restaurant: "Restaurant",
@@ -125,29 +98,30 @@ export default function PlaceCard({
       park: "Park",
       museum: "Museum",
       // ... (keep your existing mappings)
-    };
-
-    for (const type of place.types) {
-      if (type in typeMapping) return typeMapping[type];
     }
 
-    return place.types[0]
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (l) => l.toUpperCase());
-  };
+    for (const type of place.types) {
+      if (type in typeMapping) return typeMapping[type]
+    }
+
+    return place.types[0].replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+  }
 
   const formatOpenHours = () => {
-    if (!place.opening_hours) return null;
+    if (!place.opening_hours) return null
 
-    console.log("Opening hours:", place);
-    const status = place.opening_hours.open_now ? (
+    // Determine if the place is open based on the opening_hours data
+    const isOpen = place.opening_hours.open_now
+    console.log("isOpen:", isOpen)
+
+    const status = isOpen ? (
       <span className="text-green-600">Open now</span>
     ) : (
       <span className="text-red-600">Closed now</span>
-    );
+    )
 
     if (!place.opening_hours.weekday_text?.length) {
-      return <p className="text-sm">{status}</p>;
+      return <p className="text-sm">{status}</p>
     }
 
     return (
@@ -162,47 +136,41 @@ export default function PlaceCard({
         )}
         <button
           onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setShowAllHours(!showAllHours);
+            e.preventDefault()
+            e.stopPropagation()
+            setShowAllHours(!showAllHours)
           }}
           className="text-xs text-primary mt-1 hover:underline"
         >
           {showAllHours ? "Show less" : "Show hours"}
         </button>
       </div>
-    );
-  };
+    )
+  }
 
   const formatPriceLevel = () => {
-    if (place.price_level === undefined) return null;
+    if (place.price_level === undefined) return null
     return (
       <span className="text-xs">
         <span className="text-primary">{"€".repeat(place.price_level)}</span>
-        <span className="text-gray-300">
-          {"€".repeat(4 - place.price_level)}
-        </span>
+        <span className="text-gray-300">{"€".repeat(4 - place.price_level)}</span>
       </span>
-    );
-  };
+    )
+  }
 
   const formatRating = () => {
-    if (!place.rating) return null;
+    if (!place.rating) return null
     return (
       <div className="flex items-center">
         <Star className="h-3 w-3 text-yellow-500 mr-1" />
         <span className="text-sm font-medium">{place.rating.toFixed(1)}</span>
-        {place.user_ratings_total && (
-          <span className="text-xs text-gray-500 ml-1">
-            ({place.user_ratings_total})
-          </span>
-        )}
+        {place.user_ratings_total && <span className="text-xs text-gray-500 ml-1">({place.user_ratings_total})</span>}
       </div>
-    );
-  };
+    )
+  }
 
-  const address = place.formatted_address || place.vicinity || "";
-  const categoryName = getCategoryName();
+  const address = place.formatted_address || place.vicinity || ""
+  const categoryName = getCategoryName()
 
   return (
     <motion.div
@@ -219,9 +187,7 @@ export default function PlaceCard({
           <div className="flex-1 min-w-0">
             {" "}
             {/* Prevent text overflow */}
-            <h3 className="font-bold text-lg text-gray-900 truncate">
-              {place.name}
-            </h3>
+            <h3 className="font-bold text-lg text-gray-900 truncate">{place.name}</h3>
             <div className="flex items-center mt-1 flex-wrap gap-2">
               <div className="flex items-center">
                 <Tag className="h-3 w-3 mr-1 text-primary" />
@@ -261,9 +227,7 @@ export default function PlaceCard({
           {place.formatted_phone_number && (
             <div className="flex items-start">
               <Phone className="h-4 w-4 mr-2 text-gray-500 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-gray-600 break-all">
-                {place.formatted_phone_number}
-              </p>
+              <p className="text-sm text-gray-600 break-all">{place.formatted_phone_number}</p>
             </div>
           )}
         </div>
@@ -315,12 +279,8 @@ export default function PlaceCard({
           )}
         </div>
 
-        {directionsError && (
-          <p className="text-red-500 text-xs mt-2 text-center">
-            {directionsError}
-          </p>
-        )}
+        {directionsError && <p className="text-red-500 text-xs mt-2 text-center">{directionsError}</p>}
       </div>
     </motion.div>
-  );
+  )
 }
