@@ -3,12 +3,26 @@
 import { useEffect, useState, useMemo, useCallback } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { ArrowLeft, Loader2, RefreshCw, Search, AlertTriangle } from "lucide-react"
+import {
+  Loader2,
+  RefreshCw,
+  Search,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  SlidersHorizontal,
+  MapPin,
+  Users,
+  ArrowLeft,
+} from "lucide-react"
 import Link from "next/link"
 import PlaceCard from "@/components/place-card"
 import WeatherInfo from "@/components/weather-info"
 import PlaceCardSkeleton from "@/components/place-card-skeleton"
 import WeatherInfoSkeleton from "@/components/weather-info-skeleton"
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 // Enhanced type definitions
 type Place = {
@@ -73,6 +87,9 @@ interface AppError {
   retryable?: boolean
 }
 
+// Sort options for places
+type SortOption = "relevance" | "rating" | "distance" | "popularity"
+
 // Improved mood to Google place type mapping
 const moodGoogleTypes: Record<string, string[]> = {
   Peaceful: ["park", "library", "book_store", "spa"],
@@ -109,6 +126,24 @@ export default function ResultsPage() {
   const [searchRadius, setSearchRadius] = useState(5000)
   const [retryCount, setRetryCount] = useState(0)
   const [usedFallback, setUsedFallback] = useState(false)
+  const [showBackToTop, setShowBackToTop] = useState(false)
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [placesPerPage] = useState(10)
+
+  // Sorting state
+  const [sortOption, setSortOption] = useState<SortOption>("relevance")
+
+  // Track scroll position to show/hide back to top button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 300)
+    }
+
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
   // Enhanced Google Maps loader with timeout and retry
   const loadGoogleMaps = async (): Promise<void> => {
@@ -398,8 +433,8 @@ export default function ResultsPage() {
 
         console.log(`Found ${uniquePlaces.length} unique places`)
 
-        // Get details for a reasonable number of places
-        const placesToFetch = uniquePlaces.slice(0, 20)
+        // Get details for a reasonable number of places - increased to get more for pagination
+        const placesToFetch = uniquePlaces.slice(0, 50)
         const detailedPlacesPromises = placesToFetch.map(getPlaceDetails)
 
         const detailedPlaces = (await Promise.all(detailedPlacesPromises)).filter(Boolean) as Place[]
@@ -431,8 +466,8 @@ export default function ResultsPage() {
           }
         }
 
-        // Sort places by distance
-        detailedPlaces.sort((a, b) => (a.distance || 0) - (b.distance || 0))
+        // Sort places by quality score (implemented below)
+        // We'll set them in the state unsorted, then sort in the filteredAndSortedPlaces memo
         setPlaces(detailedPlaces)
         console.log("Places loaded successfully:", detailedPlaces.length)
 
@@ -440,6 +475,9 @@ export default function ResultsPage() {
         setError(null)
         setRetryCount(0)
         setUsedFallback(false)
+
+        // Reset to first page when loading new data
+        setCurrentPage(1)
       } catch (err) {
         // Handle place fetching errors
         if (err && typeof err === "object" && "type" in err) {
@@ -487,20 +525,121 @@ export default function ResultsPage() {
     }
   }, [lat, lng, mood, searchRadius, usedFallback, retryCount])
 
-  // Weather-based filtering
-  const filteredPlaces = useMemo(() => {
-    if (!weather) return places
+  // Calculate quality score for a place
+  const calculateQualityScore = (place: Place): number => {
+    let score = 0
 
-    const weatherType = weather.weather[0]?.main
-    const outdoorTypes = ["park", "hiking", "beach", "outdoor"]
+    // Rating contributes up to 5 points
+    if (place.rating) {
+      score += place.rating
+    }
 
-    return places.filter((place) => {
-      if (["Rain", "Snow"].includes(weatherType || "")) {
-        return !place.types?.some((t) => outdoorTypes.some((type) => t.includes(type)))
-      }
-      return true
-    })
-  }, [places, weather])
+    // Number of ratings contributes up to 2 points (normalized)
+    if (place.user_ratings_total) {
+      // Logarithmic scale to handle wide range of values
+      score += Math.min(2, Math.log10(place.user_ratings_total) / 2)
+    }
+
+    // Distance contributes up to 3 points (closer is better)
+    if (place.distance) {
+      // Inverse relationship - closer places get higher scores
+      // Max 3 points for places within 500m, scaling down to 0 for places at 5000m or more
+      const distanceScore = Math.max(0, 3 - place.distance / 1667)
+      score += distanceScore
+    }
+
+    // Having photos contributes up to 1 point
+    if (place.photos && place.photos.length > 0) {
+      score += Math.min(1, place.photos.length / 5)
+    }
+
+    // Having a website contributes 1 point
+    if (place.website) {
+      score += 1
+    }
+
+    // Having opening hours contributes 1 point
+    if (place.opening_hours && place.opening_hours.weekday_text) {
+      score += 1
+    }
+
+    // Being open now contributes 2 points
+    if (place.opening_hours && place.opening_hours.open_now === true) {
+      score += 2
+    }
+
+    return score
+  }
+
+  // Weather-based and sorted filtering
+  const filteredAndSortedPlaces = useMemo(() => {
+    // First apply weather-based filtering
+    const weatherFiltered = weather
+      ? places.filter((place) => {
+          const weatherType = weather.weather[0]?.main
+          const outdoorTypes = ["park", "hiking", "beach", "outdoor"]
+
+          if (["Rain", "Snow"].includes(weatherType || "")) {
+            return !place.types?.some((t) => outdoorTypes.some((type) => t.includes(type)))
+          }
+          return true
+        })
+      : places
+
+    // Then sort based on the selected sort option
+    const sorted = [...weatherFiltered]
+
+    switch (sortOption) {
+      case "rating":
+        sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0))
+        break
+      case "distance":
+        sorted.sort((a, b) => (a.distance || 0) - (b.distance || 0))
+        break
+      case "popularity":
+        sorted.sort((a, b) => (b.user_ratings_total || 0) - (a.user_ratings_total || 0))
+        break
+      case "relevance":
+      default:
+        // Sort by quality score (combination of rating, popularity, distance, etc.)
+        sorted.sort((a, b) => calculateQualityScore(b) - calculateQualityScore(a))
+        break
+    }
+
+    return sorted
+  }, [places, weather, sortOption])
+
+  // Get current page places
+  const currentPlaces = useMemo(() => {
+    const indexOfLastPlace = currentPage * placesPerPage
+    const indexOfFirstPlace = indexOfLastPlace - placesPerPage
+    return filteredAndSortedPlaces.slice(indexOfFirstPlace, indexOfLastPlace)
+  }, [filteredAndSortedPlaces, currentPage, placesPerPage])
+
+  // Calculate total pages
+  const totalPages = useMemo(
+    () => Math.ceil(filteredAndSortedPlaces.length / placesPerPage),
+    [filteredAndSortedPlaces, placesPerPage],
+  )
+
+  // Pagination handlers
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1)
+      // Scroll to top of results when changing pages
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1)
+      // Scroll to top of results when changing pages
+      window.scrollTo({ top: 0, behavior: "smooth" })
+      // Scroll to top of results when changing pages
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }
 
   // Initial load
   useEffect(() => {
@@ -529,6 +668,39 @@ export default function ResultsPage() {
     )
   }
 
+  // Render pagination controls
+  const renderPagination = () => {
+    if (totalPages <= 1) return null
+
+    return (
+      <div className="flex items-center justify-between mt-8 mb-4">
+        <Button
+          variant="outline"
+          onClick={goToPrevPage}
+          disabled={currentPage === 1}
+          className="flex items-center gap-1"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Previous
+        </Button>
+
+        <span className="text-sm text-muted-foreground">
+          Page {currentPage} of {totalPages}
+        </span>
+
+        <Button
+          variant="outline"
+          onClick={goToNextPage}
+          disabled={currentPage === totalPages}
+          className="flex items-center gap-1"
+        >
+          Next
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    )
+  }
+
   if (!lat || !lng) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
@@ -548,15 +720,19 @@ export default function ResultsPage() {
   return (
     <main className="flex min-h-screen flex-col p-4 sm:p-6 md:p-8 bg-background">
       <div className="w-full max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center mb-6">
+        {/* Header with improved navigation */}
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
           <Link
             href="/"
-            className="mr-4 p-2 bg-background border border-border rounded-full shadow-sm hover:bg-muted transition-colors"
+            className="flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-lg shadow-sm hover:bg-muted transition-colors"
           >
-            <ArrowLeft className="h-5 w-5 text-foreground" />
+            <ArrowLeft className="h-4 w-4" />
+            <span className="font-medium">Back to Home</span>
           </Link>
-          <h1 className="text-2xl font-bold text-foreground">{mood ? `${mood} Places` : "Recommended Places"}</h1>
+
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">
+            {mood ? `${mood} Places` : "Recommended Places"}
+          </h1>
         </div>
 
         {/* Loading State */}
@@ -618,33 +794,77 @@ export default function ResultsPage() {
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-4">
                   <p className="text-sm text-muted-foreground">
-                    Showing {filteredPlaces.length} {mood?.toLowerCase()} places
+                    Showing {filteredAndSortedPlaces.length} {mood?.toLowerCase()} places
                   </p>
-                  <button
-                    onClick={handleRetry}
-                    className="flex items-center text-xs text-primary hover:text-primary/80 transition-colors"
-                  >
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    Refresh
-                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {/* Sort dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="flex items-center gap-1">
+                          <SlidersHorizontal className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Sort by:</span>
+                          <span className="font-medium capitalize">{sortOption}</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setSortOption("relevance")}>
+                          <Star className="h-4 w-4 mr-2 text-yellow-500" />
+                          Relevance
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setSortOption("rating")}>
+                          <Star className="h-4 w-4 mr-2 text-yellow-500" />
+                          Rating
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setSortOption("distance")}>
+                          <MapPin className="h-4 w-4 mr-2 text-blue-500" />
+                          Distance
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setSortOption("popularity")}>
+                          <Users className="h-4 w-4 mr-2 text-green-500" />
+                          Popularity
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
 
-                {filteredPlaces.length > 0 ? (
-                  <motion.div
-                    className="grid gap-4 sm:grid-cols-2"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ staggerChildren: 0.1 }}
-                  >
-                    {filteredPlaces.map((place, index) => (
-                      <PlaceCard
-                        key={`${place.place_id}-${index}`}
-                        place={place}
-                        index={index}
-                        userLocation={{ lat: Number(lat), lng: Number(lng) }}
-                      />
-                    ))}
-                  </motion.div>
+                {filteredAndSortedPlaces.length > 0 ? (
+                  <>
+                    <motion.div
+                      className="grid gap-4 sm:grid-cols-2"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ staggerChildren: 0.1 }}
+                    >
+                      {currentPlaces.map((place, index) => (
+                        <PlaceCard
+                          key={`${place.place_id}-${index}`}
+                          place={place}
+                          index={index}
+                          userLocation={{ lat: Number(lat), lng: Number(lng) }}
+                        />
+                      ))}
+                    </motion.div>
+
+                    {/* Pagination controls */}
+                    {renderPagination()}
+
+                    {/* Back to top button */}
+                    {showBackToTop && (
+                      <motion.button
+                        className="fixed bottom-6 right-6 z-50 bg-primary text-primary-foreground p-3 rounded-full shadow-lg hover:bg-primary/90 transition-all"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                        aria-label="Back to top"
+                      >
+                        <ChevronLeft className="h-5 w-5 rotate-90" />
+                      </motion.button>
+                    )}
+                  </>
                 ) : (
                   <div className="text-center py-12 bg-card rounded-lg shadow-sm border border-border">
                     <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

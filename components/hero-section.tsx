@@ -1,7 +1,8 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { MapPin, Navigation, Search } from "lucide-react"
+import { Navigation, Search } from "lucide-react"
+import Image from "next/image"
 
 export function HeroSection() {
   return (
@@ -18,9 +19,26 @@ export function HeroSection() {
             <div className="mb-4 flex justify-center">
               <div className="relative">
                 <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-primary to-primary/60 opacity-75 blur-sm" />
-                <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-background shadow-sm">
-                  <MapPin className="h-8 w-8 text-primary" />
-                </div>
+                <motion.div
+                  className="relative flex h-20 w-20 items-center justify-center rounded-full bg-background shadow-sm overflow-hidden"
+                  initial={{ rotate: 0 }}
+                  animate={{ rotate: [0, -5, 5, 0] }}
+                  transition={{
+                    repeat: Number.POSITIVE_INFINITY,
+                    repeatType: "loop",
+                    duration: 4,
+                    ease: "easeInOut",
+                  }}
+                >
+                  <Image
+                    src="/VibeFinder.png"
+                    alt="VibeFinder Logo"
+                    width={56}
+                    height={56}
+                    className="object-contain"
+                    priority
+                  />
+                </motion.div>
               </div>
             </div>
 
