@@ -721,7 +721,7 @@ export default function ResultsPage() {
     <main className="flex min-h-screen flex-col p-4 sm:p-6 md:p-8 bg-background">
       <div className="w-full max-w-3xl mx-auto">
         {/* Header with improved navigation */}
-        <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
+        <div className="flex items-center justify-between mb-6 gap-4">
           <Link
             href="/"
             className="flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-lg shadow-sm hover:bg-muted transition-colors"
@@ -738,14 +738,6 @@ export default function ResultsPage() {
         {/* Loading State */}
         {loadingPhase !== "done" ? (
           <div>
-            <div className="flex items-center mb-4">
-              <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
-              <p className="text-sm font-medium text-foreground">
-                {loadingPhase === "maps" && "Loading maps..."}
-                {loadingPhase === "weather" && "Checking weather..."}
-                {loadingPhase === "places" && "Finding places..."}
-              </p>
-            </div>
             {renderSkeletons()}
           </div>
         ) : (
