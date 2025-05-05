@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, MapPin } from "lucide-react"
 import { motion } from "framer-motion"
 import { MoodCard } from "./mood-card"
 
@@ -204,7 +203,7 @@ export default function MoodGrid() {
         </motion.div>
       )}
 
-      {isLoading && (
+      {/* {isLoading && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -219,7 +218,7 @@ export default function MoodGrid() {
             </p>
           </div>
         </motion.div>
-      )}
+      )} */}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {moods.map((mood, index) => (
