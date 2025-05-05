@@ -80,6 +80,38 @@ const moods: Mood[] = [
     activeColor: "bg-teal-100 dark:bg-teal-900",
     textColor: "text-teal-700 dark:text-teal-300",
   },
+  {
+    name: "Trip",
+    emoji: "✈️",
+    color: "bg-cyan-50 dark:bg-cyan-950",
+    hoverColor: "hover:bg-cyan-100 dark:hover:bg-cyan-900",
+    activeColor: "bg-cyan-100 dark:bg-cyan-900",
+    textColor: "text-cyan-700 dark:text-cyan-300",
+  },
+  {
+    name: "Photography",
+    emoji: "📸",
+    color: "bg-pink-50 dark:bg-pink-950",
+    hoverColor: "hover:bg-pink-100 dark:hover:bg-pink-900",
+    activeColor: "bg-pink-100 dark:bg-pink-900",
+    textColor: "text-pink-700 dark:text-pink-300",
+  },
+  {
+    name: "Inspired",
+    emoji: "✨",
+    color: "bg-amber-50 dark:bg-amber-950",
+    hoverColor: "hover:bg-amber-100 dark:hover:bg-amber-900",
+    activeColor: "bg-amber-100 dark:bg-amber-900",
+    textColor: "text-amber-700 dark:text-amber-300",
+  },
+  {
+    name: "Romantic",
+    emoji: "💖",
+    color: "bg-rose-50 dark:bg-rose-950",
+    hoverColor: "hover:bg-rose-100 dark:hover:bg-rose-900",
+    activeColor: "bg-rose-100 dark:bg-rose-900",
+    textColor: "text-rose-700 dark:text-rose-300",
+  }
 ]
 
 export default function MoodGrid() {
