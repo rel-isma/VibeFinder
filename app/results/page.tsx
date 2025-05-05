@@ -305,8 +305,14 @@ export default function ResultsPage() {
                 result.geometry?.location?.lng() || 0,
               )
 
+              // Use isOpen() method instead of deprecated open_now property
               const openingHours = result.opening_hours
-              const openNow = openingHours?.open_now ?? openingHours?.isOpen?.() ?? null
+              let openNow = null
+              if (openingHours) {
+                if (typeof openingHours.isOpen === "function") {
+                  openNow = openingHours.isOpen()
+                }
+              }
 
               resolve({
                 place_id: place.place_id,
@@ -328,8 +334,6 @@ export default function ResultsPage() {
                 opening_hours: {
                   open_now: openNow,
                   weekday_text: openingHours?.weekday_text,
-                  periods: openingHours?.periods,
-                  isOpen: openingHours?.isOpen,
                 },
                 formatted_phone_number: result.formatted_phone_number,
                 website: result.website,
@@ -513,8 +517,6 @@ export default function ResultsPage() {
     loadAllData()
   }
 
-  const handleBack = () => router.push("/")
-
   // Render loading skeletons
   const renderSkeletons = () => {
     return (
@@ -531,11 +533,14 @@ export default function ResultsPage() {
 
   if (!lat || !lng) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-        <h1 className="text-2xl font-bold text-center mb-2">Location Required</h1>
-        <p className="text-gray-600 text-center mb-6">We need your location to provide recommendations.</p>
-        <Link href="/" className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90">
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+        <AlertTriangle className="h-12 w-12 text-red-500 dark:text-red-400 mb-4" />
+        <h1 className="text-2xl font-bold text-center mb-2 text-foreground">Location Required</h1>
+        <p className="text-muted-foreground text-center mb-6">We need your location to provide recommendations.</p>
+        <Link
+          href="/"
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+        >
           Go Back
         </Link>
       </div>
@@ -543,14 +548,17 @@ export default function ResultsPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col p-4 sm:p-6 md:p-8 bg-gray-50">
+    <main className="flex min-h-screen flex-col p-4 sm:p-6 md:p-8 bg-background">
       <div className="w-full max-w-3xl mx-auto">
         {/* Header */}
         <div className="flex items-center mb-6">
-          <Link href="/" className="mr-4 p-2 bg-white rounded-full shadow-sm hover:bg-gray-50 transition-colors">
-            <ArrowLeft className="h-5 w-5 text-gray-700" />
+          <Link
+            href="/"
+            className="mr-4 p-2 bg-background border border-border rounded-full shadow-sm hover:bg-muted transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 text-foreground" />
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">{mood ? `${mood} Places` : "Recommended Places"}</h1>
+          <h1 className="text-2xl font-bold text-foreground">{mood ? `${mood} Places` : "Recommended Places"}</h1>
         </div>
 
         {/* Loading State */}
@@ -558,7 +566,7 @@ export default function ResultsPage() {
           <div>
             <div className="flex items-center mb-4">
               <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
-              <p className="text-sm font-medium text-gray-700">
+              <p className="text-sm font-medium text-foreground">
                 {loadingPhase === "maps" && "Loading maps..."}
                 {loadingPhase === "weather" && "Checking weather..."}
                 {loadingPhase === "places" && "Finding places..."}
@@ -573,25 +581,25 @@ export default function ResultsPage() {
 
             {/* Error State */}
             {error && (
-              <div className="bg-red-50 p-6 rounded-lg border border-red-100 mb-6">
+              <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-lg border border-red-100 dark:border-red-800/30 mb-6">
                 <div className="flex items-start">
-                  <AlertTriangle className="h-6 w-6 text-red-500 mr-3 mt-0.5" />
+                  <AlertTriangle className="h-6 w-6 text-red-500 dark:text-red-400 mr-3 mt-0.5" />
                   <div>
-                    <h3 className="text-lg font-medium text-red-800">
+                    <h3 className="text-lg font-medium text-red-800 dark:text-red-300">
                       {error.type === "location" && "Location Error"}
                       {error.type === "weather" && "Weather Error"}
                       {error.type === "api" && "Service Error"}
                       {error.type === "no_results" && "No Results Found"}
                       {error.type === "maps" && "Maps Error"}
                     </h3>
-                    <p className="text-red-700 mt-1">{error.message}</p>
+                    <p className="text-red-700 dark:text-red-400 mt-1">{error.message}</p>
                   </div>
                 </div>
                 <div className="mt-4 flex gap-3">
                   {error.retryable && (
                     <button
                       onClick={handleRetry}
-                      className="flex items-center px-4 py-2 bg-white border border-red-300 rounded-md hover:bg-red-50 transition-colors"
+                      className="flex items-center px-4 py-2 bg-background dark:bg-gray-800 border border-red-300 dark:border-red-800/50 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Try Again
@@ -599,7 +607,7 @@ export default function ResultsPage() {
                   )}
                   <Link
                     href="/"
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                    className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
                   >
                     {error.type === "no_results" ? "Change Mood" : "Go Back"}
                   </Link>
@@ -611,7 +619,7 @@ export default function ResultsPage() {
             {!error && (
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-4">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Showing {filteredPlaces.length} {mood?.toLowerCase()} places
                   </p>
                   <button
@@ -640,10 +648,10 @@ export default function ResultsPage() {
                     ))}
                   </motion.div>
                 ) : (
-                  <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-                    <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold text-gray-900 mb-2">No Matching Places Found</h2>
-                    <p className="text-gray-600 mb-6">
+                  <div className="text-center py-12 bg-card rounded-lg shadow-sm border border-border">
+                    <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold text-foreground mb-2">No Matching Places Found</h2>
+                    <p className="text-muted-foreground mb-6">
                       We couldn&apos;t find any {mood?.toLowerCase()} places within {searchRadius / 1000}km.
                     </p>
                     <div className="flex gap-3 justify-center">
@@ -661,7 +669,7 @@ export default function ResultsPage() {
                       ) : null}
                       <Link
                         href="/"
-                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                       >
                         Change Mood
                       </Link>

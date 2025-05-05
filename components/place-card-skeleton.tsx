@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function PlaceCardSkeleton() {
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-100 p-4">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-100 dark:border-gray-700 p-4">
       {/* Header with name, category and distance */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
         <div className="flex-1 min-w-0">
@@ -19,7 +19,7 @@ export default function PlaceCardSkeleton() {
         <Skeleton className="h-4 w-24" />
       </div>
 
-      <div className="h-px bg-gray-100 my-3"></div>
+      <div className="h-px bg-gray-100 dark:bg-gray-700 my-3"></div>
 
       {/* Details section */}
       <div className="space-y-3 mb-3">

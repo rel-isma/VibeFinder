@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function WeatherInfoSkeleton() {
   return (
-    <div className="bg-white rounded-lg p-4 mb-4 shadow-sm border border-gray-100">
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 shadow-sm border border-gray-100 dark:border-gray-700">
       <div className="flex items-center mb-3">
         <Skeleton className="h-14 w-14 rounded-full mr-4" />
         <div className="flex-1">
@@ -12,7 +12,7 @@ export default function WeatherInfoSkeleton() {
         </div>
       </div>
 
-      <div className="bg-gray-50 p-3 rounded-md">
+      <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
         <Skeleton className="h-5 w-48 mb-3" />
 
         <div className="grid grid-cols-3 gap-2">
