@@ -309,9 +309,7 @@ export default function ResultsPage() {
               const openingHours = result.opening_hours
               let openNow = null
               if (openingHours) {
-                if (typeof openingHours.isOpen === "function") {
-                  openNow = openingHours.isOpen()
-                }
+                  openNow = openingHours.open_now
               }
 
               resolve({

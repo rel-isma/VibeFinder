@@ -28,7 +28,7 @@ export function MoodCard({
 }: MoodProps) {
   return (
     <motion.button
-      className={`${color} ${hoverColor} rounded-xl p-6 flex flex-col items-center justify-center h-32 transition-all shadow-sm border border-gray-100 dark:border-gray-800 relative ${textColor} ${
+      className={`${color} ${hoverColor} rounded-xl p-4 sm:p-6 flex flex-col items-center justify-center h-28 sm:h-32 transition-all shadow-sm border border-gray-100 dark:border-gray-800 relative ${textColor} ${
         isSelected ? activeColor : ""
       }`}
       whileHover={{ scale: 1.03, y: -5 }}
@@ -43,8 +43,8 @@ export function MoodCard({
         <Loader2 className="h-8 w-8 animate-spin" />
       ) : (
         <>
-          <span className="text-4xl mb-3">{emoji}</span>
-          <span className="font-medium">{name}</span>
+          <span className="text-3xl sm:text-4xl mb-2 sm:mb-3">{emoji}</span>
+          <span className="font-medium text-sm sm:text-base">{name}</span>
         </>
       )}
     </motion.button>

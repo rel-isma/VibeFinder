@@ -12,8 +12,8 @@ export function HeroSection() {
         <div className="absolute -bottom-[10%] -left-[10%] h-[500px] w-[500px] rounded-full bg-primary/5 blur-3xl" />
       </div>
 
-      <div className="container relative z-10">
-        <div className="mx-auto max-w-3xl text-center">
+      <div className="mx-auto max-w-lg px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="mx-auto text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <div className="mb-4 flex justify-center">
               <div className="relative">
