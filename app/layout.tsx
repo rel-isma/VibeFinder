@@ -10,8 +10,40 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "VibeFinder - Find Places Based on Your Mood",
-  description: "Discover nearby locations that match your current mood, weather, and location.",
+  description: "Discover the best places nearby tailored to your mood, current weather, and location with VibeFinder.",
+  icons: {
+    icon: "/VibeFinder.png",
+    shortcut: "/VibeFinder.png",
+    apple: "/VibeFinder.png",
+  },
+  keywords: ["VibeFinder", "mood based places", "nearby activities", "location suggestions", "weather mood suggestions", "travel mood app"],
+  authors: [{ name: "VibeFinder Team", url: "https://vibefinder-pink.vercel.app/" }],
+  creator: "VibeFinder",
+  openGraph: {
+    title: "VibeFinder - Discover Places by Mood",
+    description: "Let your mood guide you. VibeFinder helps you find spots that match your vibe.",
+    url: "https://vibefinder-pink.vercel.app/",
+    siteName: "VibeFinder",
+    images: [
+      {
+        url: "https://vibefinder-pink.vercel.app/VibeFinder.png",
+        width: 1200,
+        height: 630,
+        alt: "VibeFinder preview",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "VibeFinder - Discover Places by Mood",
+    description: "Let your mood guide you. Find the best spots based on your vibe.",
+    images: ["https://vibefinder-pink.vercel.app/VibeFinder.png"],
+    creator: "@vibefinder",
+  },
 }
+
 
 export default function RootLayout({
   children,
