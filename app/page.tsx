@@ -22,7 +22,7 @@ function MoodGridSkeleton() {
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col">
+    <main className="flex flex-col">
       <HeroSection />
 
       <section className="py-8 md:py-12">
