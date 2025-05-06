@@ -1,3 +1,5 @@
+import withPWA from 'next-pwa'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -7,10 +9,21 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true, // Required for static exports
+    unoptimized: true,
   },
-  output: 'export', // Add this line for static generation
-  trailingSlash: true, // Recommended for static exports
+  output: 'export',
+  trailingSlash: true,
 }
 
-export default nextConfig
+const pwaConfig = withPWA({
+  ...nextConfig,
+  pwa: {
+    dest: 'public',
+    disable: process.env.NODE_ENV === 'development',
+    register: true,
+    skipWaiting: true,
+    buildExcludes: [/middleware-manifest\.json$/],
+  }
+})
+
+export default process.env.NODE_ENV === 'development' ? nextConfig : pwaConfig

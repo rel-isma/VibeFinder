@@ -1,0 +1,22 @@
+{
+    "name": "VibeFinder",
+    "short_name": "VibeFinder",
+    "description": "Discover the best places nearby tailored to your mood with VibeFinder.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#4f46e5",
+    "orientation": "portrait",
+    "icons": [
+      {
+        "src": "/VibeFinder.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "/VibeFinder.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ]
+  }
