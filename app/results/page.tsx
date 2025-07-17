@@ -162,6 +162,15 @@ declare global {
   }
 }
 
+// --- Force Google Maps API key error for demo/testing ---
+const alwaysShowMapsError = true;
+const forcedMapsError = {
+  type: "maps" as const,
+  message:
+    "Google Maps failed to load. This is likely because the API key is invalid or out of quota. VibeFinder uses a Google Maps API key to show places near you. The current API key is no longer working because it is out of the free trial or has exceeded its quota. To see places, a new API key is needed. Please keep using VibeFinder—I am working on getting a new API key so this feature will work again soon!",
+  retryable: false,
+};
+
 export default function ResultsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -171,9 +180,10 @@ export default function ResultsPage() {
 
   const [places, setPlaces] = useState<Place[]>([]);
   const [weather, setWeather] = useState<Weather | null>(null);
-  const [loadingPhase, setLoadingPhase] = useState<
-    "maps" | "weather" | "places" | "done"
-  >("maps");
+  // Remove loadingPhase
+  // const [loadingPhase, setLoadingPhase] = useState<
+  //   "maps" | "weather" | "places" | "done"
+  // >("maps");
   const [error, setError] = useState<AppError | null>(null);
   const [searchRadius, setSearchRadius] = useState(5000);
   const [retryCount, setRetryCount] = useState(0);
@@ -214,7 +224,14 @@ export default function ResultsPage() {
         // Set a timeout in case Google never loads
         setTimeout(() => {
           clearInterval(checkGoogleExists);
-          reject(new Error("Google Maps loading timeout"));
+          // Check for InvalidKeyMapError in window.google.maps
+          if (window.google && window.google.maps && window.google.maps.Map) {
+            // No error thrown, just timeout
+            reject(new Error("Google Maps loading timeout"));
+          } else {
+            // Could be invalid key
+            reject(new Error("InvalidKeyMapError"));
+          }
         }, 10000);
 
         return;
@@ -225,7 +242,14 @@ export default function ResultsPage() {
       script.async = true;
 
       const timeoutId = setTimeout(() => {
-        reject(new Error("Google Maps loading timeout"));
+        // Check for InvalidKeyMapError in window.google.maps
+        if (window.google && window.google.maps && window.google.maps.Map) {
+          // No error thrown, just timeout
+          reject(new Error("Google Maps loading timeout"));
+        } else {
+          // Could be invalid key
+          reject(new Error("InvalidKeyMapError"));
+        }
       }, 10000);
 
       script.onload = () => {
@@ -488,14 +512,29 @@ export default function ResultsPage() {
         };
       }
 
-      setLoadingPhase("maps");
-      await loadGoogleMaps();
+      // setLoadingPhase("maps");
+      await loadGoogleMaps().catch((err) => {
+        // Check for InvalidKeyMapError
+        if (
+          err instanceof Error &&
+          err.message &&
+          err.message.includes("InvalidKeyMapError")
+        ) {
+          throw {
+            type: "maps" as const,
+            message:
+              "Google Maps failed to load. This is likely because the API key is invalid or out of quota. VibeFinder uses a Google Maps API key to show places near you. The current API key is no longer working because it is out of the free trial or has exceeded its quota. To see places, a new API key is needed. Please keep using VibeFinder—I am working on getting a new API key so this feature will work again soon!",
+            retryable: false,
+          };
+        }
+        throw err;
+      });
 
-      setLoadingPhase("weather");
+      // setLoadingPhase("weather");
       const weatherData = await fetchWeather();
       setWeather(weatherData);
 
-      setLoadingPhase("places");
+      // setLoadingPhase("places");
 
       // Determine which place types to search for
       let types: string[] = [];
@@ -618,7 +657,7 @@ export default function ResultsPage() {
         });
       }
     } finally {
-      setLoadingPhase("done");
+      // setLoadingPhase("done");
     }
   }, [lat, lng, mood, searchRadius, usedFallback, retryCount]);
 
@@ -757,19 +796,8 @@ export default function ResultsPage() {
     loadAllData();
   };
 
-  // Render loading skeletons
-  const renderSkeletons = () => {
-    return (
-      <>
-        <WeatherInfoSkeleton />
-        <div className="grid gap-4 sm:grid-cols-2">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <PlaceCardSkeleton key={index} />
-          ))}
-        </div>
-      </>
-    );
-  };
+  // Remove renderSkeletons and loadingPhase usage
+  // const renderSkeletons = () => { ... }
 
   // Render pagination controls
   const renderPagination = () => {
@@ -842,180 +870,186 @@ export default function ResultsPage() {
           </h1>
         </div>
 
-        {/* Loading State */}
-        {loadingPhase !== "done" ? (
-          <div>{renderSkeletons()}</div>
-        ) : (
-          <>
-            {/* Weather */}
-            {weather && <WeatherInfo weather={weather} />}
+        {/* Weather - always show if weather is available */}
+        {weather && <WeatherInfo weather={weather} />}
 
-            {/* Error State */}
-            {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-lg border border-red-100 dark:border-red-800/30 mb-6">
-                <div className="flex items-start">
-                  <AlertTriangle className="h-6 w-6 text-red-500 dark:text-red-400 mr-3 mt-0.5" />
-                  <div>
-                    <h3 className="text-lg font-medium text-red-800 dark:text-red-300">
-                      {error.type === "location" && "Location Error"}
-                      {error.type === "weather" && "Weather Error"}
-                      {error.type === "api" && "Service Error"}
-                      {error.type === "no_results" && "No Results Found"}
-                      {error.type === "maps" && "Maps Error"}
-                    </h3>
-                    <p className="text-red-700 dark:text-red-400 mt-1">
-                      {error.message}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 flex gap-3">
-                  {error.retryable && (
+        {/* Force show Google Maps API key error if alwaysShowMapsError is true */}
+        {alwaysShowMapsError && (
+          <div className="text-center py-12 bg-card rounded-lg shadow-sm border border-border mb-6">
+            <AlertTriangle className="h-12 w-12 text-red-500 dark:text-red-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-foreground mb-2">
+              Google Maps Error
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              {forcedMapsError.message}
+            </p>
+          </div>
+        )}
+
+        {/* Error State (hidden if alwaysShowMapsError is true) */}
+        {!alwaysShowMapsError && error && (
+          <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-lg border border-red-100 dark:border-red-800/30 mb-6">
+            <div className="flex items-start">
+              <AlertTriangle className="h-6 w-6 text-red-500 dark:text-red-400 mr-3 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-medium text-red-800 dark:text-red-300">
+                  {error.type === "location" && "Location Error"}
+                  {error.type === "weather" && "Weather Error"}
+                  {error.type === "api" && "Service Error"}
+                  {error.type === "no_results" && "No Results Found"}
+                  {error.type === "maps" && "Maps Error"}
+                </h3>
+                <p className="text-red-700 dark:text-red-400 mt-1">
+                  {error.message}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex gap-3">
+              {error.retryable && (
+                <button
+                  onClick={handleRetry}
+                  className="flex items-center px-4 py-2 bg-background dark:bg-gray-800 border border-red-300 dark:border-red-800/50 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </button>
+              )}
+              <Link
+                href="/"
+                className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
+              >
+                {error.type === "no_results" ? "Change Mood" : "Go Back"}
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Results (hidden if alwaysShowMapsError is true) */}
+        {!alwaysShowMapsError && !error && (
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-sm text-muted-foreground">
+                Showing {filteredAndSortedPlaces.length} {mood?.toLowerCase()} places
+              </p>
+
+              <div className="flex items-center gap-2">
+                {/* Sort dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1"
+                    >
+                      <SlidersHorizontal className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Sort by:</span>
+                      <span className="font-medium capitalize">
+                        {sortOption}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => setSortOption("relevance")}
+                    >
+                      <Star className="h-4 w-4 mr-2 text-yellow-500" />
+                      Relevance
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setSortOption("rating")}
+                    >
+                      <Star className="h-4 w-4 mr-2 text-yellow-500" />
+                      Rating
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setSortOption("distance")}
+                    >
+                      <MapPin className="h-4 w-4 mr-2 text-blue-500" />
+                      Distance
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setSortOption("popularity")}
+                    >
+                      <Users className="h-4 w-4 mr-2 text-green-500" />
+                      Popularity
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Show No Matching Places Found if no places */}
+            {filteredAndSortedPlaces.length === 0 ? (
+              <div className="text-center py-12 bg-card rounded-lg shadow-sm border border-border">
+                <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-foreground mb-2">
+                  No Matching Places Found
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  We couldn&apos;t find any {mood?.toLowerCase()} places
+                  within {searchRadius / 1000}km.
+                </p>
+                <div className="flex gap-3 justify-center">
+                  {searchRadius <= 15000 ? (
                     <button
-                      onClick={handleRetry}
-                      className="flex items-center px-4 py-2 bg-background dark:bg-gray-800 border border-red-300 dark:border-red-800/50 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      onClick={() => {
+                        setSearchRadius((prev) => prev + 5000);
+                        handleRetry();
+                      }}
+                      className="flex items-center px-4 py-2 bg-primary/10 text-primary rounded-md hover:bg-primary/20 transition-colors"
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
-                      Try Again
+                      Expand Search
                     </button>
-                  )}
+                  ) : null}
                   <Link
                     href="/"
-                    className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                   >
-                    {error.type === "no_results" ? "Change Mood" : "Go Back"}
+                    Change Mood
                   </Link>
                 </div>
               </div>
-            )}
+            ) : (
+              <>
+                <motion.div
+                  className="grid gap-4 sm:grid-cols-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ staggerChildren: 0.1 }}
+                >
+                  {currentPlaces.map((place, index) => (
+                    <PlaceCard
+                      key={`${place.place_id}-${index}`}
+                      place={place}
+                      index={index}
+                      userLocation={{ lat: Number(lat), lng: Number(lng) }}
+                    />
+                  ))}
+                </motion.div>
 
-            {/* Results */}
-            {!error && (
-              <div className="mb-6">
-                <div className="flex justify-between items-center mb-4">
-                  <p className="text-sm text-muted-foreground">
-                    Showing {filteredAndSortedPlaces.length}{" "}
-                    {mood?.toLowerCase()} places
-                  </p>
+                {/* Pagination controls */}
+                {renderPagination()}
 
-                  <div className="flex items-center gap-2">
-                    {/* Sort dropdown */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-1"
-                        >
-                          <SlidersHorizontal className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">Sort by:</span>
-                          <span className="font-medium capitalize">
-                            {sortOption}
-                          </span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => setSortOption("relevance")}
-                        >
-                          <Star className="h-4 w-4 mr-2 text-yellow-500" />
-                          Relevance
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setSortOption("rating")}
-                        >
-                          <Star className="h-4 w-4 mr-2 text-yellow-500" />
-                          Rating
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setSortOption("distance")}
-                        >
-                          <MapPin className="h-4 w-4 mr-2 text-blue-500" />
-                          Distance
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setSortOption("popularity")}
-                        >
-                          <Users className="h-4 w-4 mr-2 text-green-500" />
-                          Popularity
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-
-                {filteredAndSortedPlaces.length > 0 ? (
-                  <>
-                    <motion.div
-                      className="grid gap-4 sm:grid-cols-2"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ staggerChildren: 0.1 }}
-                    >
-                      {currentPlaces.map((place, index) => (
-                        <PlaceCard
-                          key={`${place.place_id}-${index}`}
-                          place={place}
-                          index={index}
-                          userLocation={{ lat: Number(lat), lng: Number(lng) }}
-                        />
-                      ))}
-                    </motion.div>
-
-                    {/* Pagination controls */}
-                    {renderPagination()}
-
-                    {/* Back to top button */}
-                    {showBackToTop && (
-                      <motion.button
-                        className="fixed bottom-6 right-6 z-50 bg-primary text-primary-foreground p-3 rounded-full shadow-lg hover:bg-primary/90 transition-all"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={() =>
-                          window.scrollTo({ top: 0, behavior: "smooth" })
-                        }
-                        aria-label="Back to top"
-                      >
-                        <ChevronLeft className="h-5 w-5 rotate-90" />
-                      </motion.button>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-center py-12 bg-card rounded-lg shadow-sm border border-border">
-                    <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold text-foreground mb-2">
-                      No Matching Places Found
-                    </h2>
-                    <p className="text-muted-foreground mb-6">
-                      We couldn&apos;t find any {mood?.toLowerCase()} places
-                      within {searchRadius / 1000}km.
-                    </p>
-                    <div className="flex gap-3 justify-center">
-                      {searchRadius <= 15000 ? (
-                        <button
-                          onClick={() => {
-                            setSearchRadius((prev) => prev + 5000);
-                            handleRetry();
-                          }}
-                          className="flex items-center px-4 py-2 bg-primary/10 text-primary rounded-md hover:bg-primary/20 transition-colors"
-                        >
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          Expand Search
-                        </button>
-                      ) : null}
-                      <Link
-                        href="/"
-                        className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-                      >
-                        Change Mood
-                      </Link>
-                    </div>
-                  </div>
+                {/* Back to top button */}
+                {showBackToTop && (
+                  <motion.button
+                    className="fixed bottom-6 right-6 z-50 bg-primary text-primary-foreground p-3 rounded-full shadow-lg hover:bg-primary/90 transition-all"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={() =>
+                      window.scrollTo({ top: 0, behavior: "smooth" })
+                    }
+                    aria-label="Back to top"
+                  >
+                    <ChevronLeft className="h-5 w-5 rotate-90" />
+                  </motion.button>
                 )}
-              </div>
+              </>
             )}
-          </>
+          </div>
         )}
       </div>
     </main>
